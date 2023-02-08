@@ -1,1 +1,1 @@
-# flask-currenct-rates
+# flask-currency-rates
