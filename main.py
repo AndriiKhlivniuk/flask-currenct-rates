@@ -1,38 +1,40 @@
 import requests
 from models import *
 from datetime import datetime
+from sqlalchemy import desc
 
 
 key = "L2DHNuvK1jXaz8kXzZGvSsVnNVR25gmU"
 
 
-@app.route("/allrates")
-def all_rates():
-    rates = CurrencyRates.query.order_by(CurrencyRates.date.desc())
-    currency_rates_schema = CurrencyRatesSchema(many=True)
-    result = currency_rates_schema.dump(rates)
+def update_rates(rates):
+    db.create_all()
 
-    return result
+    for code, rate in rates.items():
+        currency = db.session.query(Currency).filter_by(code=code).first()
+        if not currency:
+            currency = Currency(code=code)
+            db.session.add(currency)
 
-@app.route("/history/<fromdate>/<currency>")
-def history(fromdate: str, currency: str):
-    date = datetime.strptime(fromdate, '%Y-%m-%d') 
-    rates = CurrencyRates.query.filter(CurrencyRates.date >= date).order_by(CurrencyRates.date.desc()).all()
-    currency_rates_schema = CurrencyRatesSchema(many=True)
-    result = currency_rates_schema.dump(rates)
+        new_rate = CurrencyRates(date=datetime.now(), rate=rate, currency=currency)
+        db.session.add(new_rate)
+
+        current_rate = db.session.query(CurrencyRates).filter_by(currency=currency).order_by(desc(CurrencyRates.date)).first()
+        if current_rate:
+            currency.current_rate = current_rate
     
-    currency = currency.lower()
-    pretty = ""
-    for rate in result:
-        pretty+="Date: "+rate["date"]+" rate "+currency.upper()+" to USD: "+str(rate[currency])+"<br>"
+    db.session.commit()
 
-    
-    return pretty
 
-@app.route("/actualrate/<currency_code>")
+
+
+@app.route("/actualrate/<currency_code>") #add mist
 def def_exteral_rate(currency_code: str):
     
     currency_code = currency_code.upper()
+    if currency_code not in ['UAH', 'PLN', 'EUR', 'CAD']:
+        abort(404, description="Invalid currency code")
+
     if currency_code!= 'UAH' or 'PLN' or 'EUR' or 'CAD':
         url = f"https://api.apilayer.com/exchangerates_data/latest?symbols={currency_code}%2C%20UAH%2C%20PLN%2C%20EUR%2C%20CAD&base=USD&base=USD"
     else:
@@ -43,31 +45,34 @@ def def_exteral_rate(currency_code: str):
         "apikey": key
     }
     response = requests.request("GET", url, headers=headers, data = payload)
-    status_code = response.status_code
     result = response.json()
-    update_rates(result)
-
+    update_rates(result['rates'])
 
     return f"Rate {currency_code} to USD is: "+str(result["rates"][currency_code])
 
-
-
-def update_rates(result):
-    db.create_all()
-    date = datetime.strptime(result["date"], '%Y-%m-%d') 
     
+
+@app.route("/history/<fromdate>/<currency>") 
+def history(fromdate: str, currency: str):
+    try:
+        date = datetime.strptime(fromdate, '%Y-%m-%d') 
+    except ValueError:
+        abort(404, description="Invalid date")
+
+    if currency not in ['UAH', 'PLN', 'EUR', 'CAD']:
+        abort(404, description="Invalid currency code")
+
+    currency_code = db.session.query(Currency).filter_by(code=currency.upper()).first()
+
+    rates = CurrencyRates.query.filter(CurrencyRates.date >= date, CurrencyRates.currency == currency_code).order_by(CurrencyRates.date.desc()).all()
     
-    most_recent_rates = CurrencyRates.query.order_by(CurrencyRates.date.desc()).first()
+    currency = currency.lower()
+    pretty = "" 
+    for rate in rates:
+        pretty+="Date: "+str(rate.date)+" rate "+currency.upper()+" to USD: "+str(rate.rate)+"<br>"
+    
+    return pretty
 
-    if (most_recent_rates.date != date):
-        if most_recent_rates.eur!=result["rates"]["EUR"] or most_recent_rates.cad!=result["rates"]["CAD"] or most_recent_rates.pln!=result["rates"]["PLN"] or most_recent_rates.uah!= result["rates"]["UAH"] :
-            rates = CurrencyRates(
-                                date=result["date"], eur=result["rates"]["EUR"], 
-                                cad=result["rates"]["CAD"], pln=result["rates"]["PLN"],
-                                uah=result["rates"]["UAH"] )
-
-            db.session.add(rates)
-            db.session.commit()
 
 
 

@@ -1,7 +1,7 @@
 # flask-currency-rates
 <h1>Install</h1>
 1. Install requirements: pip3 install -r requirements.txt<br>
-2. Add db to your postgres db: psql name_of_your_db < mydb.sql<br>
+2. Add db to your postgres db: psql name_of_your_db < currencyrates.sql<br>
 3. In file models.py change name to your postgres db name: <br>
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://localhost/<b>your db name</b>'<br>
 
@@ -11,6 +11,5 @@ export FLASK_APP=main.py && flask run<br>
 <h1>Usage</h1>
 1. Navigate to /actualrate/{currency_code} to see actual rate with the given currency (indicate your currency code instead {currency_code}). Example: /actualrate/uah<br>
 2. Navigate to /history/{fromdate}/{currency} to see history of rates for given currency from given indicated date until most recent. Supported currencies: UAH, PLN, EUR, CAD. Example: /history/2023-02-06/uah<br>
-
 
 
