@@ -4,7 +4,7 @@ from datetime import datetime
 from sqlalchemy import desc
 
 
-key = "L2DHNuvK1jXaz8kXzZGvSsVnNVR25gmU"
+key = "apilayer_apikey"
 
 
 def update_rates(rates):

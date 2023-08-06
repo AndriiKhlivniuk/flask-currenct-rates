@@ -1,2 +1,6 @@
-# Ignore all files in the env folder
-env/ 
+# Ignore venv
+env
+# Ignore __pycache__ directory
+__pycache__/
+
+.env
